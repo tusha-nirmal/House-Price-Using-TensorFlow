@@ -1,0 +1,121 @@
+# Regration model used to predict the discrete values
+import tensorflow as tf
+import keras
+import numpy as np
+import matplotlib as plt
+
+print(tf.__version__)
+
+# Bostan house Price Database
+
+boston_husing=keras.datasets.boston_housing
+(train_data, train_labels), (test_data, test_labels)=boston_husing.load_data()
+
+# Shuffle the training set
+preorder=train_data.shape
+print("Data Preorder:",preorder)
+order=np.argsort(np.random.random(train_labels.shape))
+train_data=train_data[order]
+postorder=print("Data Postorder ",train_data.shape)
+#print("order", order)
+train_labels=train_labels[order]
+
+#Examples and features
+
+print("Total length of the train data -Input",len(train_data))
+print("Total length of the train -Output",len(train_labels))
+
+print("1st value of the train data: ",train_data[0])
+print('1st value of the train label:',train_labels[0])
+
+# Here dataset having the
+# 12-features
+# 1 - label (Price)
+# Here each feature in dataset is stored using diffrent scale
+# Some are represented by 0&1 ,some are scales betn 0 to 100 etc
+# Features values are irrevant
+
+# use pandas to display few lines of the dataset
+
+import pandas as pd
+column_names=['CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE', 'DIS', 'RAD',
+                'TAX', 'PTRATIO', 'B', 'LSTAT']
+df=pd.DataFrame(train_data, columns=column_names)
+print(df.head())
+
+
+#Normalise the features
+# It's recommended to normalize features that use different scales and ranges. For each feature, subtract the mean of the feature and divide by the standard deviation:
+#Test data is not used to calcualte the mean and std
+mean=train_data.mean(axis=0)
+std=train_data.std(axis=0)
+train_data=(train_data-mean)/std
+test_data=(test_data-mean)/std
+print("After the Normalization of the features: ")
+df1=pd.DataFrame(test_data, columns=column_names)
+print(df1.head())
+
+
+###########################################
+## Create a Model ########################
+##########################################
+
+def build_model():
+    model=keras.Sequential(
+        [keras.layers.Dense(64, activation=tf.nn.relu,
+                            input_shape=(train_data.shape[1],)),
+         keras.layers.Dense(64, activation=tf.nn.relu),
+         keras.layers.Dense(1)
+                  ]
+    )
+
+    optimizer=tf.train.RMSPropOptimizer(0.001)
+    model.compile(loss='mse', optimizer=optimizer, metrics=['mse'])
+    return model
+
+model=build_model()
+model.summary()
+
+
+# Train the model
+# use fit
+## Display training progress by printing a single dot for each completed epoch.
+class PrintDot(keras.callbacks.Callback):
+    def on_batch_end(self, epoch, logs):
+        if epoch % 100==0 : print('')
+        print('.', end='')
+
+
+# train
+
+EPOCHS=500
+#Store training stats
+history=model.fit(train_data, train_labels, epochs=EPOCHS,
+                  validation_split=0.2, verbose=0,
+                  callbacks=[PrintDot()])
+
+# Virtualize the model's training progress using histrory object.
+# we want to use this data to determine how long to train before the model stops making progress.
+
+import matplotlib.pyplot as plt
+history_dict=history.history
+print("Keys is history: ",history_dict.keys())
+
+def plot_history(history):
+    plt.figure()
+    plt.xlabel('Epoch')
+    plt.ylabel('Mean abs error[1000$]')
+    plt.plot(history.epoch, np.array(history.history['val_mean_squared_error']),
+             label='Train Loss')
+    plt.plot(history.epoch, np.array(history.history['mean_squared_error']), label='Val Loss')
+    plt.legend()
+    plt.ylim([0.5])
+
+plot_history(history)
+#plt.show()
+
+
+
+
+
+
